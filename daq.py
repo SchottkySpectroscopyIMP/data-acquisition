@@ -109,7 +109,7 @@ class IQR(instrument):
                 break
             time.sleep(.1)
         dt1 = time.time() - t0
-        stdscr.addstr(y+1, 0, "IQR: Recording file {:d} '{:s}'".format(fileNumber, fileName))
+        stdscr.addstr(y, 0, "IQR: Recording file {:d} '{:s}'".format(fileNumber, fileName))
         stdscr.refresh()
         self.logger.info("recording file {:d} '{:s}'".format(fileNumber, fileName))
         self.logger.debug('estimated time of finish {:.2f} s'.format(self.duraTime))
@@ -120,15 +120,15 @@ class IQR(instrument):
             data = self.read()
             if data == "0":
                 break
-            stdscr.addstr(y+2, 0, "IQR: Progress {:3.0f} %".format(t*100/self.duraTime))
+            stdscr.addstr(y+1, 0, "IQR: Progress {:3.0f} %".format(t*100/self.duraTime))
             stdscr.refresh()
             t += .1
             time.sleep(.1)
-        stdscr.addstr(y+2, 0, "IQR: Progress 100 %")
+        stdscr.addstr(y+1, 0, "IQR: Progress 100 %")
         stdscr.refresh()
         self.logger.info("file {:d} '{:s}' is recorded".format(fileNumber, fileName))
         dt2 = time.time() - dt1 - t0
-        return dt1, dt2, y+3
+        return dt1, dt2, y+2
 
     def export(self, stdscr, y, fileName, fileNumber):
         time.sleep(1)
@@ -177,10 +177,10 @@ def main(stdscr):
     stdscr.refresh()
 
     metadata = {
-            "center frequency": 242.9e6, # Hz
-            "span": .2e6, # Hz
+            "center frequency": 245e6, # Hz
+            "span": 5e6, # Hz
             "reference level": -45., # dBm
-            "duration": 10, # s
+            "duration": 2, # s
             }
     metadata["sampling rate"] = metadata["span"] * 1.25
     metadata["number of samples"] = (int((metadata["sampling rate"] * metadata["duration"]) / 2621440) + 1) * 2621440
@@ -195,50 +195,39 @@ def main(stdscr):
     run, fileNumber = True, 1
 
     while run:
-        y = 7 if fileNumber % 2 == 1 else 17
+        y = 7 if fileNumber % 2 == 1 else 16
         stdscr.addstr(y, 0, ' ' * 60 + ('\n' + ' ' * 60) * 8) # erase the second to last print
         y = fsvr.acquire(stdscr, y)
 
-        while True: # continually listen on port 5025, if connection is broken, reconnect immediately
-            with subprocess.Popen(["nc", "-l", "5025"], stdout=subprocess.PIPE) as netcat: # magic command: iptables -F
-                stdscr.addstr(y, 0, "YUN: Waiting for trigger...")
-                stdscr.refresh()
-                message = netcat.stdout.readline().strip().decode("utf-8")
+        timestamp = time.localtime()
+        fileName = time.strftime('%Y%m%d', timestamp) + '_' + time.strftime('%H%M%S', timestamp)
+        metadata["timestamp"] = time.strftime("%Y", timestamp) + '-' +\
+                time.strftime("%m", timestamp) + '-' +\
+                time.strftime("%d", timestamp) + 'T' +\
+                time.strftime("%H", timestamp) + ':' +\
+                time.strftime("%M", timestamp) + ':' +\
+                time.strftime("%S", timestamp) +\
+                time.strftime("%z", timestamp)
+        dt1, dt2, y = iqr.record(stdscr, y, fileName, fileNumber)
+        dt3, y = iqr.export(stdscr, y, fileName, fileNumber)
+        stdscr.addstr(y, 0, "preparing time: {:.2f} s\nrecording time: {:.2f} s\nexporting time: {:.2f} s".format(dt1, dt2, dt3))
+        stdscr.refresh()
+        logging.info("preparing time: {:.2f} s\n{:25s} recording time: {:.2f} s\n{:25s} exporting time: {:.2f} s\n".format(dt1, ' ', dt2, ' ', dt3))
 
-                if (message == "triggered"):
-                    stdscr.addstr(y, 0, "YUN: Triggered" + ' ' * 13)
-                    stdscr.refresh()
-                    logging.getLogger("YUN").info("Arduino is triggered")
-                    timestamp = time.localtime()
-                    fileName = time.strftime('%Y%m%d', timestamp) + '_' + time.strftime('%H%M%S', timestamp)
-                    metadata["timestamp"] = time.strftime("%Y", timestamp) + '-' +\
-                            time.strftime("%m", timestamp) + '-' +\
-                            time.strftime("%d", timestamp) + 'T' +\
-                            time.strftime("%H", timestamp) + ':' +\
-                            time.strftime("%M", timestamp) + ':' +\
-                            time.strftime("%S", timestamp) +\
-                            time.strftime("%z", timestamp)
-                    dt1, dt2, y = iqr.record(stdscr, y, fileName, fileNumber)
-                    dt3, y = iqr.export(stdscr, y, fileName, fileNumber)
-                    stdscr.addstr(y, 0, "preparing time: {:.2f} s\nrecording time: {:.2f} s\nexporting time: {:.2f} s".format(dt1, dt2, dt3))
-                    stdscr.refresh()
-                    logging.info("preparing time: {:.2f} s\n{:25s} recording time: {:.2f} s\n{:25s} exporting time: {:.2f} s\n".format(dt1, ' ', dt2, ' ', dt3))
-
-                    metadata["format"] = "int16"
-                    metadata["endian"] = "little"
-                    metadata["resolution"] = 16 # bits
-                    time.sleep(.1)
-                    with open(folder + fileName + ".wvh", 'w') as header:
-                        json.dump(metadata, header, indent=4, sort_keys=True)
-                    fileNumber += 1
-                    TotalDt1 += dt1
-                    TotalDt2 += dt2
-                    TotalDt3 += dt3
-                    break
+        metadata["format"] = "int16"
+        metadata["endian"] = "little"
+        metadata["resolution"] = 16 # bits
+        time.sleep(.1)
+        with open(folder + fileName + ".wvh", 'w') as header:
+            json.dump(metadata, header, indent=4, sort_keys=True)
+        fileNumber += 1
+        TotalDt1 += dt1
+        TotalDt2 += dt2
+        TotalDt3 += dt3
 
         if stdscr.getch(0, 22) == 5: # Ctrl-e was pressed during the process
-            stdscr.addstr(27, 0,'total preparing time: {:.2f} s\ntotal recording time: {:.2f} s\ntotal exporting time: {:.2f} s'.format(TotalDt1, TotalDt2, TotalDt3))
-            stdscr.addstr(30, 0, "Exit or not? Press 'space' to the terminal, 'b' to continue.", curses.A_STANDOUT)
+            stdscr.addstr(25, 0,'total preparing time: {:.2f} s\ntotal recording time: {:.2f} s\ntotal exporting time: {:.2f} s'.format(TotalDt1, TotalDt2, TotalDt3))
+            stdscr.addstr(28, 0, "Exit or not? Press 'space' to the terminal, 'b' to continue.", curses.A_STANDOUT)
             stdscr.refresh()
 
             while True:
@@ -249,7 +238,7 @@ def main(stdscr):
                     run = False
                     break
                 elif key == ord('b'):
-                    stdscr.addstr(27, 0, ' ' * 60 + ('\n' + ' ' * 60) * 3)
+                    stdscr.addstr(25, 0, ' ' * 60 + ('\n' + ' ' * 60) * 3)
                     stdscr.refresh()
                     break
 
