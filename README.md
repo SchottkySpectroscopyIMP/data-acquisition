@@ -12,10 +12,10 @@ The code provides a command line interface to data acquisition upon the trigger 
 
 ## Usage
  1. Modify directly the source file `daq.py` to set acquisition parameters:
-  - `center frequency`
-  - `span`
-  - `reference level`
-  - `duration` (_length in time of each data file, note that the actual recording duration may differ than the setting, since the `IQR-100` constrains the file length in byte to be a multiple of the unit length 2,621,440_)
+    - `center frequency`
+    - `span`
+    - `reference level`
+    - `duration` (_length in time of each data file, note that the actual recording duration may differ than the setting, since the `IQR-100` constrains the file length in byte to be a multiple of the unit length 2,621,440_)
  2. Launch the program `python3 daq.py`
  3. Hit the combo keys `Ctrl + e` to pause the acquisition
  4. Once the progress is paused, press `b` to resume or press the `spacebar` to exit
