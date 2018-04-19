@@ -13,7 +13,7 @@ logging.basicConfig(
     level       = logging.INFO,
     format      = '%(asctime)s %(name)-5s %(message)s',
     datefmt     = '%Y-%m-%d %H:%M:%S',
-    filename    = __file__[:2] + '.log',
+    filename    = __file__[:-2] + 'log',
     filemode    = 'a')
 
 
