@@ -1,13 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 
-import sys, time, re
+import sys, re
 import socket, time, logging, subprocess, json
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 
 from multithread import Worker, WorkerSignals
+
+logging.basicConfig(
+    level       = logging.INFO,
+    format      = '%(asctime)s %(name)-5s %(message)s',
+    datefmt     = '%Y-%m-%d %H:%M:%S',
+    filename    = __file__[:2] + '.log',
+    filemode    = 'a')
+
 
 class instrument():
     def __init__(self, IP, port, logger):
