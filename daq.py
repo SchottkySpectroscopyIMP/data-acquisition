@@ -165,7 +165,7 @@ class IQR(instrument):
         print("IQR export start")
 
         self.write("SYSTem:ARCHive:SOURce:FILEname 'e:/" + "data" + "'")
-        #self.write("SYSTem:ARCHive:DESTination:FILEname 'z:/" + fileName + "'")
+        # the address of the netdisk 
         self.write("SYSTem:ARCHive:DESTination:FILEname 'x:/" + fileName + "'")
         self.write("SYSTem:ARCHive:FORMat RAW")
         self.write("SYSTem:ARCHive:STARt")
@@ -311,14 +311,10 @@ class DAQ_MainWindow(QMainWindow):
         self.fontPara = QFont("Inconsolata-dz", 24)
 
         # set the Icon
-        #self.iconStart = QIcon("/home/schospec/Documents/beamtime/icons/play.png")
-        #self.iconPause = QIcon("/home/schospec/Documents/beamtime/icons/pause.png")
-        #self.iconParaLock = QIcon("/home/schospec/Documents/beamtime/icons/lock.png")
-        #self.iconManu = QIcon("/home/schospec/Documents/beamtime/icons/userManual.png")
-        self.iconStart = QIcon("/home/qwang/SMS/DAQ/icons/play.png")
-        self.iconPause = QIcon("/home/qwang/SMS/DAQ/icons/pause.png")
-        self.iconParaLock = QIcon("/home/qwang/SMS/DAQ/icons/lock.png")
-        self.iconManu = QIcon("/home/qwang/SMS/DAQ/icons/userManual.png")
+        self.iconStart = QIcon("/data-acquisition/icons/play.png")
+        self.iconPause = QIcon("/data-acquisition/icons/pause.png")
+        self.iconParaLock = QIcon("/data-acquisition/icons/lock.png")
+        self.iconManu = QIcon("/data-acquisition/icons/userManual.png")
 
         # set folder address 
         #self.folder = "/home/schospec/Data"
@@ -678,13 +674,6 @@ class DAQ_MainWindow(QMainWindow):
                                 time.strftime("%z", timestamp)
             self.currentFileNameLab.setText(self.fileName)
             self.currentFileLab.setText("collecting file # " + str(self.fileNumber))
-            #self.IQR_record_worker = Worker(self.iqr.record, self.fileNumber, self.fileName)
-            #self.IQR_record_worker.signals.progress.connect(IQR_record_process)
-            #self.IQR_record_worker.signals.resultemit.connect(IQR_record_ready)
-            #self.threadPool.start(self.IQR_record_worker)
-            #self.IQR_export_worker = Worker(self.iqr.export, self.fileNumber, self.fileName)
-            #self.IQR_export_worker.signals.progress.connect(IQR_export_process)
-            #self.IQR_export_worker.signals.resultemit.connect(IQR_export_ready)
             self.thread_record.started.connect(lambda: self.iqr.record(self.fileNumber, self.fileName))
             self.thread_record.finished.connect(IQR_record_ready)
             print("auto-connect")
@@ -859,17 +848,6 @@ class DAQ_MainWindow(QMainWindow):
 
 
 if __name__ == '__main__':
-    # kill the process on port 5025 to prevent nc address occupied error
-    popen = subprocess.Popen(['netstat', '-lpn'], shell=False, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
-    (data, err) = popen.communicate()
-    pattern = "^tcp.*(?:5025).* (?P<pid>[0-9]*)/.*$"
-    prog = re.compile(pattern)
-    for line in data.decode().split('\n'):
-        match = re.match(prog, line)
-        if match != None:
-            pid = match.group('pid')
-            subprocess.Popen(['kill', '-9', pid])
-
     app = QApplication(sys.argv)
     daq = DAQ_MainWindow()
     daq.show()
