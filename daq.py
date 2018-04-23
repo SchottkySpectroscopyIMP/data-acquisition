@@ -56,7 +56,7 @@ class FSVR(instrument):
         SRat: sampling rate [Hz]
         RLev: reference level [dBm]
         '''
-        print("FSVR: start acquire")
+        #print("FSVR: start acquire")
         self.write("TRAC:IQ ON")
         self.write("FREQuency:CENTer {:g}MHz".format(CF/1e6))
         self.write("TRACe:IQ:SRATe {:g}MHz".format(SRat/1e6))
@@ -70,7 +70,7 @@ class FSVR(instrument):
         # start data streaming
         self.write("INITiate")
         self.logger.info("data is streaming...")
-        print("FSVR: streaming")
+        #print("FSVR: streaming")
 
 
 class IQR(instrument):
@@ -127,7 +127,7 @@ class IQR(instrument):
                 self.t += .1
                 QTimer.singleShot(100, loop_record)
                 
-        print("IQR record start")
+        #print("IQR record start")
 
         self.write("TRIGger:RECorder:STARt")
         self.logger.debug('preparing, please wait...')
@@ -162,7 +162,7 @@ class IQR(instrument):
                 self.signals.progress.emit(int(percentVal))
                 QTimer.singleShot(100, loop_export)
 
-        print("IQR export start")
+        #print("IQR export start")
 
         self.write("SYSTem:ARCHive:SOURce:FILEname 'e:/" + "data" + "'")
         # the address of the netdisk 
@@ -597,7 +597,7 @@ class DAQ_MainWindow(QMainWindow):
             self.statusButton.setIcon(self.iconPause)
             self.statusBar().showMessage("data acquisition running")
             self.threadPool.start(self.FSVR_acquire_worker)
-            print("play")
+            #print("play")
             self.TotalDt1 = self.TotalDt2 = self.TotalDt3 = 0
             self.fileFixNumber = 1
 
@@ -612,7 +612,7 @@ class DAQ_MainWindow(QMainWindow):
                 # status - pause - (stop by file number limit)
                 self.statusButton.pressed.disconnect(button_pause)
                 self.statusButton.pressed.connect(button_play)
-                print("stop by file")
+                #print("stop by file")
                 button_play()
         self.statusButton.setEnabled(False)
         self.statusButton.pressed.connect(button_play)
@@ -637,7 +637,7 @@ class DAQ_MainWindow(QMainWindow):
         QTimer.singleShot(12000, FSVR_init_ready)
 
         def FSVR_acquire_ready():
-            print("FSVR: ready")
+            #print("FSVR: ready")
             self.threadPool.start(self.IQR_init_worker)
 
         # build Arduino work
@@ -676,7 +676,7 @@ class DAQ_MainWindow(QMainWindow):
             self.currentFileLab.setText("collecting file # " + str(self.fileNumber))
             self.thread_record.started.connect(lambda: self.iqr.record(self.fileNumber, self.fileName))
             self.thread_record.finished.connect(IQR_record_ready)
-            print("auto-connect")
+            #print("auto-connect")
             self.iqr.signals.progress.connect(IQR_record_process)
             self.iqr.signals.result.connect(IQR_record_result)
             self.iqr.signals.finished.connect(self.thread_record.quit)
@@ -686,7 +686,7 @@ class DAQ_MainWindow(QMainWindow):
 
         # build IQR work
         def IQR_init_work(FileSize, SRat, stdscr):
-            print("IQR: init start!")
+            #print("IQR: init start!")
             self.iqr = IQR("10.10.91.93", FileSize, SRat)
         def IQR_init_ready_auto():
             self.IQRStatus.setFormat("running")
@@ -718,7 +718,7 @@ class DAQ_MainWindow(QMainWindow):
             self.thread_export = QThread()
             self.thread_record.started.connect(lambda: self.iqr.record(self.fileNumber, self.fileName))
             self.thread_record.finished.connect(IQR_record_ready)
-            print("manu-connect")
+            #print("manu-connect")
             self.iqr.signals.progress.connect(IQR_record_process)
             self.iqr.signals.result.connect(IQR_record_result)
             self.iqr.signals.finished.connect(self.thread_record.quit)
@@ -745,11 +745,11 @@ class DAQ_MainWindow(QMainWindow):
             self.iqr.signals.progress.disconnect(IQR_record_process)
             self.iqr.signals.result.disconnect(IQR_record_result)
             self.iqr.signals.finished.disconnect(self.thread_record.quit)
-            print("record-disconnect")
+            #print("record-disconnect")
             self.iqr.signals.progress.connect(IQR_export_process)
             self.iqr.signals.result.connect(IQR_export_result)
             self.iqr.signals.finished.connect(self.thread_export.quit)
-            print("export-connect")
+            #print("export-connect")
             QTimer.singleShot(1000, self.thread_export.start)
 
         def IQR_export_process(percentVal):
@@ -771,7 +771,7 @@ class DAQ_MainWindow(QMainWindow):
                 json.dump(self.metadata, header, indent=4, sort_keys=True)
             self.fileLogText.append("file {:d}: {:s}\npreparing time: {:.2f} s\nrecording time: {:.2f} s\nexporting time: {:.2f} s\n".format(self.fileNumber, self.fileName, self.dt1, self.dt2, self.dt3))
             logging.info("preparing time: {:.2f} s\n{:25s} recording time: {:.2f} s\n{:25s} exporting time: {:.2f} s\n".format(self.dt1, ' ', self.dt2, ' ', self.dt3))
-            print("export-disconnect")
+            #print("export-disconnect")
             self.iqr.signals.progress.disconnect(IQR_export_process)
             self.iqr.signals.result.disconnect(IQR_export_result)
             self.iqr.signals.finished.disconnect(self.thread_export.quit)
@@ -793,12 +793,14 @@ class DAQ_MainWindow(QMainWindow):
                 self.fileModecheck.setEnabled(True)
                 self.setButton.setEnabled(True)
                 self.setButton.setChecked(False)
+                self.runModeButton.setEnabled(False)
+                self.runModeButton.setChecked(False)
                 self.statusButton.setEnabled(False)
                 self.statusButton.setIcon(self.iconStart)
-                self.QLineEdit_SetupStyle(self.cenFreqInput)
-                self.QLineEdit_SetupStyle(self.spanInput)
-                self.QLineEdit_SetupStyle(self.refLevInput)
-                self.QLineEdit_SetupStyle(self.durationInput)
+                self.QLineEdit_StopStyle(self.cenFreqInput)
+                self.QLineEdit_StopStyle(self.spanInput)
+                self.QLineEdit_StopStyle(self.refLevInput)
+                self.QLineEdit_StopStyle(self.durationInput)
                 if self.fileModecheck.isChecked():
                     self.QLineEdit_StopStyle(self.fileMaxNumInput)
                     self.statusButton.setCheckable(False)
@@ -808,14 +810,14 @@ class DAQ_MainWindow(QMainWindow):
                 if self.exit:
                     logging.info("application stops\n\n\n")
                     sys.exit()
-            elif self.runModeButton.isChecked():
-                self.IQR_init_worker = Worker(IQR_init_work, self.metadata["number of samples"], self.metadata["sampling rate"])
-                self.IQR_init_worker.signals.finished.connect(IQR_init_ready_manu)
-                QTimer.singleShot(1000, lambda: self.threadPool.start(self.IQR_init_worker))
             else:
                 self.IQR_init_worker = Worker(IQR_init_work, self.metadata["number of samples"], self.metadata["sampling rate"])
-                self.IQR_init_worker.signals.finished.connect(IQR_init_ready_auto)
+                if self.runModeButton.isChecked():
+                    self.IQR_init_worker.signals.finished.connect(IQR_init_ready_manu)
+                else:
+                    self.IQR_init_worker.signals.finished.connect(IQR_init_ready_auto)
                 QTimer.singleShot(1000, lambda: self.threadPool.start(self.IQR_init_worker))
+
 
     def keyPressEvent(self, event):
         if event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_W:
