@@ -311,10 +311,10 @@ class DAQ_MainWindow(QMainWindow):
         self.fontPara = QFont("Inconsolata-dz", 24)
 
         # set the Icon
-        self.iconStart = QIcon("/data-acquisition/icons/play.png")
-        self.iconPause = QIcon("/data-acquisition/icons/pause.png")
-        self.iconParaLock = QIcon("/data-acquisition/icons/lock.png")
-        self.iconManu = QIcon("/data-acquisition/icons/userManual.png")
+        self.iconStart = QIcon("./icons/play.png")
+        self.iconPause = QIcon("./icons/pause.png")
+        self.iconParaLock = QIcon("./icons/lock.png")
+        self.iconManu = QIcon("./icons/userManual.png")
 
         # set folder address 
         #self.folder = "/home/schospec/Data"
