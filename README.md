@@ -15,6 +15,16 @@ This implementation adopts `Qt`-based Graphical User Interface (**GUI**) to prov
   - `sys`, `re`, `time`, `socket`, `logging`, `subprocess`, `json`, `traceback`
  
 ## Usage
+
+### Preparation
+
+  1. Connect the server to the network and create a shared disk.
+  2. Change the IP in the `Arduino Yún`'s [code](https://github.com/SchottkySpectroscopyIMP/ArduinoTriggerSystem) to the IP of server and upload the code to the `Arduino Yún`.
+  3. Power all the devices (`FSVR-7`, `IQR-100`, `Arduino Yún`) and connect them to the network. (The IPs of them may need to be the same with the socket IPs in code)
+  4. Map the shared disk of the server from `IQR-100`, and adjust the drive letter of the actual disk in the code.
+
+### Operation
+
   1. Launch the program `python3 daq.py`
   2. Wait for the calibration of `FSVR` to complete (meanwhile all the buttons are disabled), then set acquisition parameters (hit the `set button` to lock the parameters):
       - `center frequency` (default: 242.9 MHz)
