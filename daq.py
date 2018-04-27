@@ -816,7 +816,7 @@ class DAQ_MainWindow(QMainWindow):
                     self.IQR_init_worker.signals.finished.connect(IQR_init_ready_manu)
                 else:
                     self.IQR_init_worker.signals.finished.connect(IQR_init_ready_auto)
-                QTimer.singleShot(1000, lambda: self.threadPool.start(self.IQR_init_worker))
+                self.threadPool.start(self.IQR_init_worker)
 
 
     def keyPressEvent(self, event):
