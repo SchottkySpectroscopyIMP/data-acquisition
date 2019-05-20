@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 
-import sys, re
+import sys, re, os
 import socket, time, logging, subprocess, json
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
@@ -89,7 +89,7 @@ class IQR(instrument):
         self.write("INPut:RECorder:LIMits:FILesize {:d}".format(FileSize))
         self.write("TRIGger:RECorder:SYNC SALone")
         self.write("TRIGger:RECorder:SOURce MANual")
-        time.sleep(1)
+        time.sleep(1.1)
 
         self.write("TRIGger:RECorder:ARM ONNO")
         self.logger.info("initialization is ready")
@@ -190,7 +190,7 @@ class DAQ_MainWindow(QMainWindow):
         self.height = 900
 
         # the default parameters setting
-        self.cenFreq = 242.9    # MHz
+        self.cenFreq = 243.5    # MHz
         self.span = 500         # kHz
         self.refLev = -50       # dBm
         self.duration = 10      # s
@@ -317,8 +317,8 @@ class DAQ_MainWindow(QMainWindow):
         self.iconManu = QIcon("./icons/userManual.png")
 
         # set folder address 
-        #self.folder = "/home/schospec/Data"
-        self.folder = "/home/data/"
+        self.folder = "/home/schospec/Data/"
+        #self.folder = "/home/Data/"
 
         self.initUI()
 
@@ -620,6 +620,7 @@ class DAQ_MainWindow(QMainWindow):
         # build FSVR work
         def FSVR_init_work(stdscr):
             self.fsvr = FSVR("10.10.91.95")
+            #self.fsvr = FSVR("10.10.81.51")
         def FSVR_init_ready():
             self.FSVRStatus.setFormat("running")
             self.FSVRStatus.setStyleSheet(self.ready_style)
@@ -688,6 +689,7 @@ class DAQ_MainWindow(QMainWindow):
         def IQR_init_work(FileSize, SRat, stdscr):
             #print("IQR: init start!")
             self.iqr = IQR("10.10.91.93", FileSize, SRat)
+            #self.iqr = IQR("10.10.1.135", FileSize, SRat)
         def IQR_init_ready_auto():
             self.IQRStatus.setFormat("running")
             self.IQRStatus.setStyleSheet(self.ready_style)
@@ -767,6 +769,7 @@ class DAQ_MainWindow(QMainWindow):
         def IQR_export_result(result):
             self.dt3 = result
         def IQR_export_ready():
+            time.sleep(1)
             with open(self.folder + self.fileName + ".wvh", 'w') as header:
                 json.dump(self.metadata, header, indent=4, sort_keys=True)
             self.fileLogText.append("file {:d}: {:s}\npreparing time: {:.2f} s\nrecording time: {:.2f} s\nexporting time: {:.2f} s\n".format(self.fileNumber, self.fileName, self.dt1, self.dt2, self.dt3))
@@ -823,6 +826,7 @@ class DAQ_MainWindow(QMainWindow):
         if event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_W:
             reply = QMessageBox.question(self, "Message", "Are you sure to quit?", QMessageBox.Yes|QMessageBox.No, QMessageBox.No)
             if reply == QMessageBox.Yes:
+                subprocess.call("rm -f {:s}*.wsm".format(self.folder), shell=True)
                 if self.statusButton.isCheckable():
                     self.statusBar().showMessage("will exit on data acquisition completed")
                     self.statusButton.setCheckable(False)
