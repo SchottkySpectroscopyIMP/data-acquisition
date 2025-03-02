@@ -92,7 +92,7 @@ class IQR(instrument):
         time.sleep(1.1)
 
         self.write("TRIGger:RECorder:ARM ONNO")
-        self.logger.info("initialization is ready")
+        self.time_IQR_ARMON = time.perf_counter_ns()         self.logger.info("initialization is ready")
 
     def record(self, fileNumber, fileName):
 
@@ -130,6 +130,7 @@ class IQR(instrument):
         #print("IQR record start")
 
         self.write("TRIGger:RECorder:STARt")
+        self.time_IQR_start = time.perf_counter_ns() - self.time_IQR_ARMON # record the precise starting time of recording for one file (~micsec)
         self.logger.debug('preparing, please wait...')
 
         self.t0 = time.time()
@@ -771,6 +772,8 @@ class DAQ_MainWindow(QMainWindow):
         def IQR_export_ready():
             time.sleep(1)
             with open(self.folder + self.fileName + ".wvh", 'w') as header:
+                self.metadata["order in files"] = self.fileFixNumber
+                self.metadata["precise timestamp"] = self.time_IQR_start
                 json.dump(self.metadata, header, indent=4, sort_keys=True)
             self.fileLogText.append("file {:d}: {:s}\npreparing time: {:.2f} s\nrecording time: {:.2f} s\nexporting time: {:.2f} s\n".format(self.fileNumber, self.fileName, self.dt1, self.dt2, self.dt3))
             logging.info("preparing time: {:.2f} s\n{:25s} recording time: {:.2f} s\n{:25s} exporting time: {:.2f} s\n".format(self.dt1, ' ', self.dt2, ' ', self.dt3))
