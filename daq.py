@@ -74,7 +74,7 @@ class FSVR(instrument):
 
 
 class IQR(instrument):
-    def __init__(self, IP, FileSize, SRat):
+    def __init__(self, IP, FileSize, SRat, fileName="data"):
         super(IQR, self).__init__(IP, 5025, logging.getLogger("IQR"))
         self.signals = WorkerSignals()
         '''
@@ -82,9 +82,10 @@ class IQR(instrument):
         FileSize: number of samples to be recorded in one file
         '''
         self.duraTime = FileSize / SRat # s
+        self.fileName = fileName # default, 'data'
         self.write("INSTrument:SELect:MODE RECorder")
         # set the recodering data name 'data'
-        self.write("INPut:RECorder:WAVeform:SELect 'e:/" + "data" +"'")
+        self.write("INPut:RECorder:WAVeform:SELect 'e:/" + self.fileName +"'")
         self.write("INPut:RECorder:LIMits:CONDition FILesize")
         self.write("INPut:RECorder:LIMits:FILesize {:d}".format(FileSize))
         self.write("TRIGger:RECorder:SYNC SALone")
@@ -92,9 +93,10 @@ class IQR(instrument):
         time.sleep(1.1)
 
         self.write("TRIGger:RECorder:ARM ONNO")
-        self.time_IQR_ARMON = time.perf_counter_ns()         self.logger.info("initialization is ready")
+        self.time_IQR_ARMON = time.perf_counter()
+        self.logger.info("initialization is ready")
 
-    def record(self, fileNumber, fileName):
+    def record(self, fileNumber):
 
         def loop_arm(): # sponge time to wait for IQR arming
             self.write("STATus:RECorder?")
@@ -102,7 +104,7 @@ class IQR(instrument):
             if data == '1':
                 self.signals.progress.emit(-1)
                 self.dt1 = time.time() - self.t0
-                self.logger.info("recording file {:d} '{:s}'".format(fileNumber, fileName))
+                self.logger.info("recording file {:d} '{:s}'".format(fileNumber, self.fileName))
                 self.logger.debug('estimated time of finish {:.2f} s'.format(self.duraTime))
                 self.t = 0
                 loop_record()
@@ -116,7 +118,7 @@ class IQR(instrument):
             if data == '0':
                 self.t = 1
                 self.signals.progress.emit(100)
-                self.logger.info("file {:d} '{:s}' is recorded".format(fileNumber, fileName))
+                self.logger.info("file {:d} '{:s}' is recorded".format(fileNumber, self.fileName))
                 self.dt2 = time.time() - self.dt1 - self.t0
                 self.signals.result.emit((self.dt1, self.dt2))
                 self.signals.finished.emit()
@@ -130,14 +132,14 @@ class IQR(instrument):
         #print("IQR record start")
 
         self.write("TRIGger:RECorder:STARt")
-        self.time_IQR_start = time.perf_counter_ns() - self.time_IQR_ARMON # record the precise starting time of recording for one file (~micsec)
+        self.time_IQR_start = time.perf_counter() - self.time_IQR_ARMON # record the precise starting time of recording for one file (~micsec)
         self.logger.debug('preparing, please wait...')
 
         self.t0 = time.time()
         loop_arm()
 
 
-    def export(self, fileNumber, fileName):
+    def export(self, fileNumber):
 
         def loop_wait(): # sponge time to wait for IQR wiping out its memory
             self.write("SYSTem:ARCHive:RUNNing?")
@@ -155,7 +157,7 @@ class IQR(instrument):
             if data == '"100 %"':
                 self.signals.progress.emit(100)
                 self.dt = time.time() - self.t0
-                self.logger.info("file {:d} '{:s}' is exported".format(fileNumber, fileName))
+                self.logger.info("file {:d} '{:s}' is exported".format(fileNumber, self.fileName))
                 self.signals.result.emit(self.dt)
                 self.signals.finished.emit()
                 return
@@ -165,13 +167,13 @@ class IQR(instrument):
 
         #print("IQR export start")
 
-        self.write("SYSTem:ARCHive:SOURce:FILEname 'e:/" + "data" + "'")
+        self.write("SYSTem:ARCHive:SOURce:FILEname 'e:/" + self.fileName + "'")
         # the address of the netdisk 
-        self.write("SYSTem:ARCHive:DESTination:FILEname 'x:/" + fileName + "'")
+        self.write("SYSTem:ARCHive:DESTination:FILEname 'y:/" + self.fileName + "'")
         self.write("SYSTem:ARCHive:FORMat RAW")
         self.write("SYSTem:ARCHive:STARt")
         self.signals.progress.emit(-1)
-        self.logger.debug("exporting file {:d} '{:s}', please wait...".format(fileNumber, fileName))
+        self.logger.debug("exporting file {:d} '{:s}', please wait...".format(fileNumber, self.fileName))
 
         self.t0 = time.time()
         loop_wait()
@@ -318,8 +320,8 @@ class DAQ_MainWindow(QMainWindow):
         self.iconManu = QIcon("./icons/userManual.png")
 
         # set folder address 
-        self.folder = "/home/schospec/Data/"
-        #self.folder = "/home/Data/"
+        #self.folder = "/home/schospec/Data/"
+        self.folder = "/home/data/"
 
         self.initUI()
 
@@ -620,8 +622,9 @@ class DAQ_MainWindow(QMainWindow):
 
         # build FSVR work
         def FSVR_init_work(stdscr):
-            self.fsvr = FSVR("10.10.91.95")
+            #self.fsvr = FSVR("10.10.91.95")
             #self.fsvr = FSVR("10.10.81.51")
+            self.fsvr = FSVR("192.168.31.107")
         def FSVR_init_ready():
             self.FSVRStatus.setFormat("running")
             self.FSVRStatus.setStyleSheet(self.ready_style)
@@ -689,8 +692,19 @@ class DAQ_MainWindow(QMainWindow):
         # build IQR work
         def IQR_init_work(FileSize, SRat, stdscr):
             #print("IQR: init start!")
-            self.iqr = IQR("10.10.91.93", FileSize, SRat)
-            #self.iqr = IQR("10.10.1.135", FileSize, SRat)
+            # fileName setting
+            timestamp = time.localtime(time.time() + 10)
+            self.fileName = time.strftime("%Y%m%d", timestamp) + "_" + time.strftime("%H%M%S", timestamp)
+            self.metadata["timestamp"] = time.strftime("%Y", timestamp) + "-" +\
+                                time.strftime("%m", timestamp) + "-" +\
+                                time.strftime("%d", timestamp) + "T" +\
+                                time.strftime("%H", timestamp) + ":" +\
+                                time.strftime("%M", timestamp) + ":" +\
+                                time.strftime("%S", timestamp) +\
+                                time.strftime("%z", timestamp)
+            self.currentFileNameLab.setText(self.fileName)
+            #self.iqr = IQR("10.10.91.93", FileSize, SRat, self.fileName)
+            self.iqr = IQR("192.168.31.100", FileSize, SRat, self.fileName)
         def IQR_init_ready_auto():
             self.IQRStatus.setFormat("running")
             self.IQRStatus.setStyleSheet(self.ready_style)
@@ -704,29 +718,18 @@ class DAQ_MainWindow(QMainWindow):
         def IQR_init_ready_manu():
             self.IQRStatus.setFormat("running")
             self.IQRStatus.setStyleSheet(self.ready_style)
-            # fileName setting
-            timestamp = time.localtime(time.time() + 2)
-            self.fileName = time.strftime("%Y%m%d", timestamp) + "_" + time.strftime("%H%M%S", timestamp)
-            self.metadata["timestamp"] = time.strftime("%Y", timestamp) + "-" +\
-                                time.strftime("%m", timestamp) + "-" +\
-                                time.strftime("%d", timestamp) + "T" +\
-                                time.strftime("%H", timestamp) + ":" +\
-                                time.strftime("%M", timestamp) + ":" +\
-                                time.strftime("%S", timestamp) +\
-                                time.strftime("%z", timestamp)
-            self.currentFileNameLab.setText(self.fileName)
             self.currentFileLab.setText("collecting file # " + str(self.fileNumber))
             logging.info("manual triggered")
             self.thread_record = QThread()
             self.thread_export = QThread()
-            self.thread_record.started.connect(lambda: self.iqr.record(self.fileNumber, self.fileName))
+            self.thread_record.started.connect(lambda: self.iqr.record(self.fileNumber))
             self.thread_record.finished.connect(IQR_record_ready)
             #print("manu-connect")
             self.iqr.signals.progress.connect(IQR_record_process)
             self.iqr.signals.result.connect(IQR_record_result)
             self.iqr.signals.finished.connect(self.thread_record.quit)
             QTimer.singleShot(2000, self.thread_record.start)
-            self.thread_export.started.connect(lambda: self.iqr.export(self.fileNumber, self.fileName))
+            self.thread_export.started.connect(lambda: self.iqr.export(self.fileNumber))
             self.thread_export.finished.connect(IQR_export_ready)
             return
 
@@ -753,7 +756,10 @@ class DAQ_MainWindow(QMainWindow):
             self.iqr.signals.result.connect(IQR_export_result)
             self.iqr.signals.finished.connect(self.thread_export.quit)
             #print("export-connect")
-            QTimer.singleShot(1000, self.thread_export.start)
+            if self.metadata["number of samples"] > 2.5e8: # fileSize > 1G, store in the IQR
+                IQR_export_ready()
+            else:
+                QTimer.singleShot(1000, self.thread_export.start)
 
         def IQR_export_process(percentVal):
             if percentVal == -1:
@@ -771,12 +777,21 @@ class DAQ_MainWindow(QMainWindow):
             self.dt3 = result
         def IQR_export_ready():
             time.sleep(1)
-            with open(self.folder + self.fileName + ".wvh", 'w') as header:
-                self.metadata["order in files"] = self.fileFixNumber
-                self.metadata["precise timestamp"] = self.time_IQR_start
-                json.dump(self.metadata, header, indent=4, sort_keys=True)
-            self.fileLogText.append("file {:d}: {:s}\npreparing time: {:.2f} s\nrecording time: {:.2f} s\nexporting time: {:.2f} s\n".format(self.fileNumber, self.fileName, self.dt1, self.dt2, self.dt3))
-            logging.info("preparing time: {:.2f} s\n{:25s} recording time: {:.2f} s\n{:25s} exporting time: {:.2f} s\n".format(self.dt1, ' ', self.dt2, ' ', self.dt3))
+            if self.metadata["number of samples"] > 2.5e8:
+                with open(self.folder + self.fileName + ".bak.wvh", 'w') as header:
+                    self.metadata["order in files"] = self.fileFixNumber
+                    self.metadata["precise timestamp"] = self.iqr.time_IQR_start
+                    json.dump(self.metadata, header, indent=4, sort_keys=True)
+                    self.fileLogText.append("file {:d}: {:s}\npreparing time: {:.2f} s\nrecording time: {:.2f} s\nfile stored in IQR.".format(self.fileNumber, self.fileName, self.dt1, self.dt2))
+                    logging.info("preparing time: {:.2f} s\n{:25s} recording time: {:.2f} s\n".format(self.dt1, ' ', self.dt2))
+
+            else:
+                with open(self.folder + self.fileName + ".wvh", 'w') as header:
+                    self.metadata["order in files"] = self.fileFixNumber
+                    self.metadata["precise timestamp"] = self.iqr.time_IQR_start
+                    json.dump(self.metadata, header, indent=4, sort_keys=True)
+                    self.fileLogText.append("file {:d}: {:s}\npreparing time: {:.2f} s\nrecording time: {:.2f} s\nexporting time: {:.2f} s\n".format(self.fileNumber, self.fileName, self.dt1, self.dt2, self.dt3))
+                    logging.info("preparing time: {:.2f} s\n{:25s} recording time: {:.2f} s\n{:25s} exporting time: {:.2f} s\n".format(self.dt1, ' ', self.dt2, ' ', self.dt3))
             #print("export-disconnect")
             self.iqr.signals.progress.disconnect(IQR_export_process)
             self.iqr.signals.result.disconnect(IQR_export_result)
@@ -792,7 +807,10 @@ class DAQ_MainWindow(QMainWindow):
             self.fileFixNumber += 1
             self.TotalDt1 += self.dt1
             self.TotalDt2 += self.dt2
-            self.TotalDt3 += self.dt3
+            if self.metadata["number of samples"] > 2.5e8:
+                self.TotalDt3 += 0
+            else:
+                self.TotalDt3 += self.dt3
             if (not self.statusButton.isCheckable()) or (self.fileModecheck.isChecked() and self.fileFixNumber >= (int(self.fileMaxNumInput.text())+1)):
                 self.fileLogText.append("total preparing time: {:.2f} s\ntotal recording time: {:.2f} s\ntotal exporting time: {:.2f} s\n\n".format(self.TotalDt1, self.TotalDt2, self.TotalDt3))
                 logging.info("total preparing time: {:.2f} s\n{:25s} total recording time: {:.2f} s\n{:25s} total exporting time: {:.2f} s\n\n".format(self.TotalDt1, ' ', self.TotalDt2, ' ', self.TotalDt3))
