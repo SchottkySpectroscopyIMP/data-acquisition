@@ -45,6 +45,8 @@ This implementation adopts `Qt`-based Graphical User Interface (**GUI**) to prov
         - at stop status: quit after hitting `yes`
       - `X button` (immediately quit the system without any prompt)
 
+_All raw data files will be transferred to the server storage folder at the end of collection, unless the size of a single file is larger than 1 GB.
+
 _All important events with timestamps will automatically be recorded in `daq.log`_.
 
 ## License
